@@ -1,8 +1,9 @@
 const express = require("express");
 const app = express();
 const bodyParser = require("body-parser");
+const moment = require("moment");
 
-var router = express.Router();
+const router = express.Router();
 
 const cors = require("cors");
 
@@ -26,18 +27,18 @@ var addExercice = require("./Models.js").addExercice;
 var findExercices = require("./Models.js").findExercices;
 var remove = require("./Models.js").remove;
 
-router.post("/new-user", function(req, res, next) {
+router.post("/new-user", (req, res, next) => {
   const name = req.body.username;
-  findStudentName(req.body.username, function(err, data) {
+  findStudentName(req.body.username, (err, data) => {
     if (err) {
       return next(err);
     }
     if (!data) {
-      createStudent(name, function(err, data) {
+      createStudent(name, (err, data) => {
         if (err) {
           return next(err);
         }
-        res.json({ username: data.name, id: data._id });
+        res.json({ username: data.name, userId: data.shortId });
       });
     } else {
       res.json({ error: "username already in use" });
@@ -45,13 +46,13 @@ router.post("/new-user", function(req, res, next) {
   });
 });
 
-router.post("/add", function(req, res, next) {
+router.post("/add", (req, res, next) => {
   const exercice = {
     description: req.body.description,
     duration: req.body.duration,
     date: req.body.date
   };
-  addExercice(req.body.userId, exercice, function(err, data) {
+  addExercice(req.body.userId, exercice, (err, data) => {
     if (err) {
       return next(err);
     }
@@ -59,7 +60,7 @@ router.post("/add", function(req, res, next) {
       username: data.name,
       description: exercice.description,
       duration: exercice.duration,
-      id: data._id,
+      userId: data.shortId,
       date: exercice.date
     });
   });
@@ -73,21 +74,25 @@ router.get("/clear", (req, res, next) => {
 });
 
 //{userId}[&from][&to][&limit]
-router.get("/log", function(req, res, next) {
+router.get("/log", (req, res, next) => {
   const fromDate = req.query.from || "1700-01-01";
-  const toDate = req.query.to || "2018-08-30";
-  const resLimit = req.query.limit || 1;
+  const toDate = req.query.to || moment().format("YYYY-MM-DD");
+
   findExercices(req.query.userId, (err, data) => {
     if (err) {
       return next(err);
     }
-    console.log(data, fromDate, toDate, resLimit);
-    const exe = data
+    const resLimit = req.query.limit || data.exercices.length;
+    const exe = data.exercices
       .filter(date => date.date <= toDate && date.date >= fromDate)
       .slice(0, resLimit);
     res.json({
-      username: req.query.userId,
-      exercices: exe,
+      username: data.name,
+      exercices: exe.map(el => ({
+        description: el.description,
+        duration: el.duration,
+        date: el.date
+      })),
       id: req.query.userId
     });
   });

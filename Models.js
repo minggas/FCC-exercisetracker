@@ -1,19 +1,21 @@
 const mongoose = require("mongoose");
+const shortId = require("shortid");
 
 mongoose.connect(
   process.env.MLAB_URI || "mongodb://localhost/exercise-track",
   { useNewUrlParser: true }
 );
 
-var db = mongoose.connection;
+let db = mongoose.connection;
 db.on("error", console.error.bind(console, "connection error:"));
 
-var StudentSchema = new mongoose.Schema(
+const StudentSchema = new mongoose.Schema(
   {
     name: {
       type: String,
       required: true
     },
+    shortId: { type: String, unique: true, default: shortId.generate },
     exercices: [
       {
         description: String,
@@ -25,11 +27,11 @@ var StudentSchema = new mongoose.Schema(
   { usePushEach: true }
 );
 
-var Student = mongoose.model("Student", StudentSchema);
+let Student = mongoose.model("Student", StudentSchema);
 
-var createStudent = function(name, done) {
-  var student = new Student({ name: name });
-  student.save(function(err, data) {
+const createStudent = (name, done) => {
+  let student = new Student({ name: name });
+  student.save((err, data) => {
     if (err) {
       return done(err);
     }
@@ -37,8 +39,8 @@ var createStudent = function(name, done) {
   });
 };
 
-var findStudentById = function(studentId, done) {
-  Student.findById(studentId, function(err, data) {
+const findStudentById = (studentId, done) => {
+  Student.findOne({ shortId: studentId }, (err, data) => {
     if (err) {
       return done(err);
     }
@@ -46,8 +48,8 @@ var findStudentById = function(studentId, done) {
   });
 };
 
-var findStudentByName = function(studentName, done) {
-  Student.findOne({ name: studentName }, function(err, data) {
+const findStudentByName = (studentName, done) => {
+  Student.findOne({ name: studentName }, (err, data) => {
     if (err) {
       return done(err);
     }
@@ -55,13 +57,13 @@ var findStudentByName = function(studentName, done) {
   });
 };
 
-var addExercice = function(personId, exercice, done) {
-  Student.findById({ _id: personId }, function(err, data) {
+const addExercice = (studentId, exercice, done) => {
+  Student.findOne({ shortId: studentId }, (err, data) => {
     if (err) {
       return done(err);
     }
     data.exercices.push(exercice);
-    data.save(function(err, data) {
+    data.save((err, data) => {
       if (err) {
         return done(err);
       }
@@ -70,21 +72,16 @@ var addExercice = function(personId, exercice, done) {
   });
 };
 
-var findExercices = function(personId, done) {
-  Student.findById(
-    {
-      _id: personId
-    },
-    function(err, data) {
-      if (err) {
-        return done(err);
-      }
-      return done(null, data.exercices);
+const findExercices = (studentId, done) => {
+  Student.findOne({ shortId: studentId }, (err, data) => {
+    if (err) {
+      return done(err);
     }
-  );
+    return done(null, data);
+  });
 };
 
-var remove = function(id, done) {
+const remove = (id, done) => {
   Student.deleteOne({ _id: id }, function(err) {});
 };
 
